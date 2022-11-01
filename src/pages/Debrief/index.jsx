@@ -36,7 +36,7 @@ function Home() {
     const dataStr =
       "data:text/json;charset=utf-8," +
       encodeURIComponent(JSON.stringify(session));
-    uploadDataToCloud(`session/${session.PID}-report-${str}.json`, dataStr)
+    uploadDataToCloud(`multimodal-session/${session.PID}-report-${str}.json`, dataStr)
     .then((snapshot) => {
         console.log("Uploaded a data_url string!");
         setStatus(true)
