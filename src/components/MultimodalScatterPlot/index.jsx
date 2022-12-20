@@ -7,14 +7,25 @@ import { Vega } from "react-vega";
 import { Box } from "@mui/material";
 import { useCallback } from "react";
 import { navtree, prev, next, up, down } from "libs/keynav";
+import AIQuery from "libs/api/AIQuery";
+import summary from "libs/speech/commands/summary";
+
 const formatIncome = d3.format("$,");
 const formatExpectancy = (d) => `${d} years`;
+
 function MultimodalScatterPlot(props) {
   const ariaLiveEl = useRef(null);
   //   const [chartData, setChartData] = useState({});
   const [rootNode, setRootNote] = useState();
   const [currentNode, setCurrentNode] = useState();
   const [chartView, setChartView] = useState();
+
+  const [question, setQuestion] = useState("");
+  const [qna, setQna] = useState();
+  const handleChange = (event) => {
+    setQuestion(event.target.value);
+  };
+
   //reference:https://github.com/datawithinreach/edconnect/blob/pantherman594/modularize-chart-component/src/components/Chart.js
   const spec = useMemo(() => {
     // construct a vega spec with signals
@@ -22,8 +33,8 @@ function MultimodalScatterPlot(props) {
 
     console.log("lite spec", liteSpec);
     const clone = JSON.parse(JSON.stringify(liteSpec));
-    clone.description =
-      "A scatter plot showing life expectancy and income per person for 38 OECD countries in different regions.";
+    // const sumstats = summary(data, options);
+    // clone.description = sumstats;
     clone.encoding.opacity = {
       condition: {
         test: '(length(selected) == 0) ||  indexof(selected, datum["country"]) >= 0',
@@ -99,7 +110,11 @@ function MultimodalScatterPlot(props) {
         new Date().toISOString()
       );
     }
-    console.log("====currentNode selection", currentNode.selection, currentNode.type)
+    console.log(
+      "====currentNode selection",
+      currentNode.selection,
+      currentNode.type
+    );
     if (
       currentNode.type === "datum" ||
       currentNode.type === "numeric-subgroup" ||

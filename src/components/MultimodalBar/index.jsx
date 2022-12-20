@@ -7,13 +7,93 @@ import { Vega } from "react-vega";
 import { Typography, Box } from "@mui/material";
 import { useCallback } from "react";
 import { navtree, prev, next, up, down } from "libs/keynav";
+import speech from "libs/speech";
+import { TextField } from "@mui/material";
+import { VegaLite } from "react-vega";
+import spec1 from "charts/barchart.json";
+import AIQuery from "libs/api/AIQuery";
+import summary from "libs/speech/commands/summary";
 
 function MultimodalBar(props) {
   const ariaLiveEl = useRef(null);
-  //   const [chartData, setChartData] = useState({});
+
   const [rootNode, setRootNote] = useState();
   const [currentNode, setCurrentNode] = useState();
   const [chartView, setChartView] = useState();
+
+  //speech
+  const formatter = d3.format(",.0f");
+
+  const [question, setQuestion] = useState("");
+  const [qna, setQna] = useState();
+  const handleChange = (event) => {
+    setQuestion(event.target.value);
+  };
+  const handleKeyPress = (event) => {
+    // console.log("keypressed", event, qna);
+    if (event.key === "Enter") {
+      //submit question
+      event.preventDefault();
+      //TODO: handle question
+
+      if (qna) {
+        console.log("question", question);
+
+        var found = qna.inquiry(question.toLowerCase());
+        if (!found) {
+          AIQuery(question).then((data) => {
+            console.log("xx" + data);
+            srSpeak(data);
+          });
+        }
+        setQuestion("");
+      }
+    }
+  };
+  const data = spec1.data.values;
+
+  const variables = [
+    {
+      field: "month",
+      type: "categorical",
+      label: "month",
+      encoding: "horizontal axis",
+    },
+    {
+      field: "weather",
+      type: "categorical",
+      label: "weather",
+      encoding: "color legend",
+    },
+    {
+      field: "count",
+      type: "numerical",
+      label: "count",
+      encoding: "vertical axis",
+    },
+  ];
+
+  const options = {
+    onLog: props.onLog,
+    variables,
+    title: spec1.title,
+    description: spec1.description,
+    responseEl: ariaLiveEl.current,
+    formatters: { count: formatter },
+  };
+
+  useEffect(() => {
+    console.log("start qna process");
+    const qna = speech(data, options);
+    qna.run();
+    setQna(qna);
+    options.responseEl = ariaLiveEl.current;
+
+    return () => {
+      console.log("clear qna process");
+      qna.stop();
+    };
+  }, []);
 
   const months = [
     "January",
@@ -52,7 +132,10 @@ function MultimodalBar(props) {
     });
     console.log("lite spec", liteSpec);
     const clone = JSON.parse(JSON.stringify(liteSpec));
-    clone.description = `A stacked bar chart showing the count of days for different weather types by each month, from 2012 to 2015.`;
+
+    //add sum stats to top level
+    const sumstats = summary(data, options);
+    clone.description = sumstats;
     clone.encoding.opacity = {
       condition: {
         test: '(!selected || length(selected) == 0) || selected && length(selected) > 0 && indexof(selected, ";" + datum["month"] + ";" + datum["weather"]) >= 0',
@@ -74,19 +157,12 @@ function MultimodalBar(props) {
 
   useEffect(() => {
     const loadData = async () => {
-      //   const chartData = await d3.csv("datasets/covid-world.csv");
-      //   console.log("Data", chartData);
-      //   setChartData({ table: chartData });
       const rootNode = await navtree(spec, { skip: ["y"] });
 
       setRootNote(rootNode);
       setCurrentNode(rootNode);
     };
     loadData();
-    // document.addEventListener("keydown", handleKeyDown);
-    // return () => {
-    //   document.removeEventListener("keydown", handleKeyDown);
-    // }
   }, []);
 
   useEffect(() => {
@@ -123,7 +199,8 @@ function MultimodalBar(props) {
       currentNode.type === "datum" ||
       currentNode.type === "category-subgroup"
     ) {
-      const selection = currentNode.selection;
+      var selection = currentNode.selection;
+
       const strings = selection.map((d) => `;${d["month"]};${d["weather"]}`);
       console.log("update selection", JSON.stringify(strings));
       chartView.signal(
@@ -138,6 +215,30 @@ function MultimodalBar(props) {
       chartView.runAsync();
     }
   }, [currentNode]);
+
+  function jumpToNode(cat1, cat2, root) {
+    function searchNode(root) {
+      var stack = [];
+      var node;
+      stack.push(rootNode);
+      while (stack.length > 0) {
+        node = stack.pop();
+        if (
+          node.type == "datum" &&
+          node.selection[0].month == cat1 &&
+          node.selection[0].weather == cat2
+        ) {
+          return node;
+        } else if (node.children && node.children.length) {
+          for (var i = 0; i < node.children.length; i++) {
+            stack.push(node.children[i]);
+          }
+        }
+      }
+    }
+
+    setCurrentNode(searchNode(rootNode));
+  }
 
   function srSpeak(text) {
     ariaLiveEl.current.innerHTML = text;
@@ -154,25 +255,23 @@ function MultimodalBar(props) {
     console.log("key", e.key, currentNode, rootNode);
 
     switch (e.key) {
-      case "a":
       case "ArrowLeft":
         setCurrentNode((currentNode) => prev(currentNode));
         e.preventDefault();
         e.stopPropagation();
         break;
-      case "d":
       case "ArrowRight":
         setCurrentNode((currentNode) => next(currentNode));
         e.preventDefault();
         e.stopPropagation();
         break;
-      case "w":
+
       case "ArrowUp":
         setCurrentNode((currentNode) => up(currentNode));
         e.preventDefault();
         e.stopPropagation();
         break;
-      case "s":
+
       case "ArrowDown":
         setCurrentNode((currentNode) => down(currentNode));
         e.preventDefault();
@@ -183,14 +282,11 @@ function MultimodalBar(props) {
     }
   };
 
-  const options = { actions: false };
   return (
     <Box mt={5}>
-      {/* <Typography variant="h6" mb={3}>Total Covid-19 Cases by Country as of June 27, 2022 <small>(Data source: Google)</small></Typography> */}
       <div role="application">
-        <div ref={ariaLiveEl} aria-live="assertive"></div>
         <div
-          aria-label="Please use the arrow keys or WASD keys to navigate this chart object"
+          aria-label="Please use the arrow keys to navigate this chart object. To use the speech method, type option + I for instruction"
           tabIndex={0}
           onKeyDown={handleKeyDown}
         >
@@ -198,6 +294,17 @@ function MultimodalBar(props) {
             <Vega spec={spec} onNewView={handleNewView} actions={false} />
           </div>
         </div>
+        <div ref={ariaLiveEl} aria-live="assertive"></div>
+        <TextField
+          sx={{ mt: 5 }}
+          id="outlined-basic"
+          value={question}
+          label="Type your question here and press enter if speech is not accessible"
+          fullWidth
+          variant="outlined"
+          onChange={handleChange}
+          onKeyPress={handleKeyPress}
+        />
       </div>
     </Box>
   );

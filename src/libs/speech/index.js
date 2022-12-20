@@ -40,26 +40,32 @@ const initialize = (data, options) => {
 
   // private ------------------------------------------------------------------------
   const speakResponse = (text, timeout = 1000) => {
-
     if (responseEl) {
       if (!os.name.includes("Mac OS")) {
         responseEl.setAttribute("role", "alert");
       }
       responseEl.innerHTML = text;
-    } 
-    
+    }
   };
 
+  //TODO: check response
   speech.inquiry = (question) => {
     const result = processCommand(question, data, options);
+    var flag = false;
     if (result) {
       speakResponse(result);
+      flag = true;
     }
-    if (onLog){
-      onLog("command", {question, result, title, variables, type:"typed"}, new Date().toISOString());
+    if (onLog) {
+      onLog(
+        "command",
+        { question, result, title, variables, type: "typed" },
+        new Date().toISOString()
+      );
     }
+    return flag;
   };
-  
+
   // public ------------------------------------------------------------------------
   speech.run = () => {
     const listeningKeys = getModifier(SETTINGS, false, false);
@@ -72,18 +78,22 @@ const initialize = (data, options) => {
       (event) => {
         logKeyPresses(listeningKeys, event);
         event.preventDefault();
-        
+
         const mic = new p5.SpeechRec();
 
         mic.onResult = () => {
           const voiceText = mic.resultString.toLowerCase();
-        //   console.log("voceText", voiceText);
+          //   console.log("voceText", voiceText);
           const result = processCommand(voiceText, data, options);
           if (result) {
             speakResponse(result);
           }
-          if (onLog){
-            onLog("command", {question:voiceText, result, title, variables, type:"spoken"}, new Date().toISOString());
+          if (onLog) {
+            onLog(
+              "command",
+              { question: voiceText, result, title, variables, type: "spoken" },
+              new Date().toISOString()
+            );
           }
         };
 
@@ -124,8 +134,18 @@ const initialize = (data, options) => {
         if (result) {
           speakResponse(result);
         }
-        if (onLog){
-          onLog("command", {question:"instructions", result, title, variables, type:"predefined"}, new Date().toISOString());
+        if (onLog) {
+          onLog(
+            "command",
+            {
+              question: "instructions",
+              result,
+              title,
+              variables,
+              type: "predefined",
+            },
+            new Date().toISOString()
+          );
         }
       }
     );
@@ -145,8 +165,18 @@ const initialize = (data, options) => {
         if (result) {
           speakResponse(result);
         }
-        if (onLog){
-          onLog("command", {question:"summary", result, title, variables, type:"predefined"}, new Date().toISOString());
+        if (onLog) {
+          onLog(
+            "command",
+            {
+              question: "summary",
+              result,
+              title,
+              variables,
+              type: "predefined",
+            },
+            new Date().toISOString()
+          );
         }
       }
     );

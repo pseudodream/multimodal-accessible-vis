@@ -13,21 +13,21 @@ import p5 from "p5";
 //get os
 const os = new UAParser().getOS();
 
-export  const capitalize = (string)=>{
+export const capitalize = (string) => {
   return string.charAt(0).toUpperCase() + string.slice(1);
-}
-export const sanitizeInquiry = text=>{
+};
+export const sanitizeInquiry = (text) => {
   let inquiry = text.slice();
   inquiry = capitalize(inquiry);
 
-  if (inquiry.endsWith("?")){
+  if (inquiry.endsWith("?")) {
     return inquiry;
-  }else if (inquiry.endsWith(".")){
+  } else if (inquiry.endsWith(".")) {
     return inquiry.slice(0, -1).concat("?");
-  }else{
+  } else {
     return inquiry.concat("?");
   }
-}
+};
 //generate feedback text
 // const getFeedbackText = () => {
 //   const feedbacks = [
@@ -67,7 +67,7 @@ export const getDefaults = () => ({
     instructionsKey: ["i", "4"],
     summaryKey: ["s", "2"],
     pause: ["p", "5"],
-  }
+  },
 });
 
 //Maps the triggers to a human-readable format to be used in instructions.

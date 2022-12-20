@@ -7,15 +7,15 @@ import minimum from "./minimum";
 import median from "./median";
 import value from "./value";
 import sum from "./sum";
+import others from "./others";
 import * as d3 from "d3";
 import { capitalize, sanitizeInquiry } from "../utils";
+import AIQuery from "libs/api/AIQuery";
 
 export const processCommand = (voiceText, data, options) => {
   const { formatters } = options;
   const inquiry = sanitizeInquiry(voiceText); // original voiceText
   voiceText = voiceText.toLowerCase(); // not case-sensitive for now
-  //manually change voice text for debug
-  // voiceText = "most crookston";
 
   let response = null;
 
@@ -31,11 +31,30 @@ export const processCommand = (voiceText, data, options) => {
     return response;
   }
 
-  // ---- (start) TODO: standardize the terms and catch synonyms, etc. (Word2vec)
-  // NLP.js, POS tagger
-  // TODO: replace the similar text in voiceText with a corresponding variable and data value name
+  //TODO: additional commands to support
 
-  // ----- (end) TODO: standardize the terms and catch synonyms, etc. (Word2vec)
+  //axis related questions
+  const axisq = new RegExp("(on|along).*(axis)");
+  if (axisq.test(voiceText)) {
+    others("axis", options);
+  }
+  //trend related questions
+  const trendq = new RegExp("gradual.*(increase|decrease)");
+  if (
+    voiceText.includes("trend") |
+    voiceText.includes("moving") |
+    trendq.test(voiceText)
+  ) {
+    response = others("trend", options);
+  }
+  //outlier detection(for scatterplot)
+  if (voiceText.includes("outlier") | voiceText.includes("anomaly")) {
+    response = others("outlier", options);
+  }
+  //correlation(for scatterplot)
+  if (voiceText.includes("correlation")) {
+    response = others("correlation", options);
+  }
 
   // recognizing command types
   const { variables } = options;
@@ -119,15 +138,13 @@ export const processCommand = (voiceText, data, options) => {
       const aggCmd = aggCmdName
         ? findCommand(aggCmdName)
         : findCommand("average");
-      
+
       const formatter = findFormatter(formatters, num);
       const ans = cmd.func(data, variables, num, catVals, cat, aggCmd.name);
 
       response = `You asked "${inquiry}". ${capitalize(cat)} that has the ${
         cmd.name
-      } ${aggCmd.name} ${numLabel} is ${
-        ans[0]
-      } with ${formatter(ans[1])}`;
+      } ${aggCmd.name} ${numLabel} is ${ans[0]} with ${formatter(ans[1])}`;
     }
   }
 
@@ -200,22 +217,15 @@ export const processCommand = (voiceText, data, options) => {
   // voiceText = "what is sun's count?"//  (not recognized)
   // voiceText = "how many count does sunny days have in July?";
 
-  // can't handle this:  vaccination rate for west virginia 
+  // can't handle this:  vaccination rate for west virginia
   // TODO: need to separate catVals by variables
   let catVals = catValues.filter((v) => voiceText.includes(v.toLowerCase()));
 
   // HACK for the study
-  if (catVals.includes("West Virginia") && catVals.includes("Virginia")){
-    catVals = catVals.filter(d=>d==="West Virginia");
+  if (catVals.includes("West Virginia") && catVals.includes("Virginia")) {
+    catVals = catVals.filter((d) => d === "West Virginia");
   }
-  // console.log(
-  //   "catVals",
-  //   catValues,
-  //   catVals,
-  //   aggExtCmdNames.some((cmd) => voiceText.includes(cmd)),
-  //   catVals.length > 0,
-  //   catVals.length <= 2
-  // );
+
   if (
     !aggExtCmdNames.some((cmd) => voiceText.includes(cmd)) &&
     catVals.length > 0 &&
@@ -244,9 +254,6 @@ export const processCommand = (voiceText, data, options) => {
     }
   }
 
-  if (response === null) {
-    response = `I heard you say "${inquiry}". Command not recognized. Please try again.`;
-  }
   return response;
 };
 // export const extractRange = (text, data, variables)=>{
@@ -275,6 +282,8 @@ export const commands = [
   { name: "total", type: "aggregate", alias: "sum" },
   { name: "value", type: "value", func: value },
   { name: "data", alias: "value" },
+  { name: "go to", alias: "value" },
+  { name: "goto", alias: "value" },
   //   { name: "mode", func: require("./mode").default },
   //   { name: "variance", func: require("./variance").default },
   //   { name: "standard deviation", func: require("./standardDeviation").default },

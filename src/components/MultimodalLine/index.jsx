@@ -7,6 +7,9 @@ import { Vega } from "react-vega";
 import { Box } from "@mui/material";
 import { useCallback } from "react";
 import { navtree, prev, next, up, down } from "libs/keynav";
+import AIQuery from "libs/api/AIQuery";
+import summary from "libs/speech/commands/summary";
+
 const formatter = d3.format("$");
 function MultimodalLine(props) {
   const ariaLiveEl = useRef(null);
@@ -151,7 +154,6 @@ function MultimodalLine(props) {
     }
   };
 
-  const options = { actions: false };
   return (
     <Box mt={5}>
       {/* <Typography variant="h6" mb={3}>Total Covid-19 Cases by Country as of June 27, 2022 <small>(Data source: Google)</small></Typography> */}
